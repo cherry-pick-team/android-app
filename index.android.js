@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {AppRegistry, Navigator} from 'react-native';
+import {AppRegistry} from 'react-native';
 import Router from './lib/utils/Router';
 import { ThemeProvider } from 'react-native-material-ui';
 import { Provider } from 'react-redux';
@@ -11,10 +11,7 @@ export default class Root extends Component {
 		return (
 			<Provider store={configureStore()}>
 				<ThemeProvider>
-					<Navigator
-						initialRoute={{id: 'main'}}
-						renderScene={Router}
-					/>
+					<Router/>
 				</ThemeProvider>
 			</Provider>
 		);
