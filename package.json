@@ -12,6 +12,7 @@
     "react-native-drawer": "^2.3.0",
     "react-native-material-kit": "^0.4.1",
     "react-native-material-ui": "^1.8.0",
+    "react-native-router-flux": "^3.38.0",
     "react-native-svg": "^5.1.5",
     "react-native-swiper": "^1.5.4",
     "react-native-vector-icons": "^4.0.0",
