@@ -3,7 +3,7 @@ package com.mobileapp;
 import android.app.Application;
 
 import com.facebook.react.ReactApplication;
-import com.audioStreaming.ReactNativeAudioStreamingPackage;
+import com.mediaPlayer.ReactNativeAudioStreamingPackage;
 import com.github.xinthink.rnmk.ReactMaterialKitPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.facebook.react.ReactNativeHost;
