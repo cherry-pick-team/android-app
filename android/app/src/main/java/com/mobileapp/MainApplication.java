@@ -10,6 +10,7 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
+import com.facebook.stetho.Stetho;
 
 import com.horcrux.svg.SvgPackage;
 
@@ -45,5 +46,23 @@ public class MainApplication extends Application implements ReactApplication {
   public void onCreate() {
     super.onCreate();
     SoLoader.init(this, /* native exopackage */ false);
+
+    Stetho.InitializerBuilder initializerBuilder = Stetho.newInitializerBuilder(this);
+
+    // Enable Chrome DevTools
+    initializerBuilder.enableWebKitInspector(
+            Stetho.defaultInspectorModulesProvider(this)
+    );
+
+    // Enable command line interface
+    initializerBuilder.enableDumpapp(
+            Stetho.defaultDumperPluginsProvider(this)
+    );
+
+    // Use the InitializerBuilder to generate an Initializer
+    Stetho.Initializer initializer = initializerBuilder.build();
+
+    // Initialize Stetho with the Initializer
+    Stetho.initialize(initializer);
   }
 }
