@@ -1,58 +1,42 @@
 package com.mediaPlayer;
 
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.AudioTrack;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
-import android.media.MediaPlayer.OnInfoListener;
+import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
-import android.widget.RemoteViews;
-
-import com.spoledge.aacdecoder.MultiPlayer;
-import com.spoledge.aacdecoder.PlayerCallback;
 
 public class Signal extends Service implements OnErrorListener,
         OnCompletionListener,
         OnPreparedListener,
-        OnInfoListener,
-        PlayerCallback {
+        OnBufferingUpdateListener {
 
-
-    // Notification
     private Class<?> clsActivity;
-    private static final int NOTIFY_ME_ID = 696969;
-    private NotificationCompat.Builder notifyBuilder;
-    private NotificationManager notifyManager = null;
-    public static RemoteViews remoteViews;
-    private MultiPlayer aacPlayer;
-
-    private static final int AAC_BUFFER_CAPACITY_MS = 2500;
-    private static final int AAC_DECODER_CAPACITY_MS = 700;
 
     public static final String BROADCAST_PLAYBACK_STOP = "stop",
             BROADCAST_PLAYBACK_PLAY = "pause",
             BROADCAST_EXIT = "exit";
 
+    private MediaPlayer mediaPlayer;
+
     private final Handler handler = new Handler();
     private final IBinder binder = new RadioBinder();
     private final SignalReceiver receiver = new SignalReceiver(this);
     private Context context;
-    private String streamingURL;
+    private String URL;
     public boolean isPlaying = false;
     private boolean isPreparingStarted = false;
     private EventsReceiver eventsReceiver;
@@ -68,8 +52,8 @@ public class Signal extends Service implements OnErrorListener,
 
         this.eventsReceiver = new EventsReceiver(this.module);
 
-
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.CREATED));
+        registerReceiver(this.eventsReceiver, new IntentFilter(Mode.NOT_CREATED));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.DESTROYED));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.STARTED));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.CONNECTING));
@@ -84,14 +68,24 @@ public class Signal extends Service implements OnErrorListener,
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.METADATA_UPDATED));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.ALBUM_UPDATED));
 
-
         this.phoneStateListener = new PhoneListener(this.module);
         this.phoneManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
         if (this.phoneManager != null) {
             this.phoneManager.listen(this.phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
         }
+    }
 
-
+    private void createMediaPlayer() {
+        if (this.mediaPlayer != null) {
+            this.mediaPlayer.stop();
+            this.mediaPlayer.release();
+        }
+        this.mediaPlayer = new MediaPlayer();
+        this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        this.mediaPlayer.setOnPreparedListener(this);
+        this.mediaPlayer.setOnCompletionListener(this);
+        this.mediaPlayer.setOnErrorListener(this);
+        this.mediaPlayer.setOnBufferingUpdateListener(this);
     }
 
     @Override
@@ -102,39 +96,23 @@ public class Signal extends Service implements OnErrorListener,
         intentFilter.addAction(BROADCAST_EXIT);
         registerReceiver(this.receiver, intentFilter);
 
-
         try {
-            this.aacPlayer = new MultiPlayer(this, AAC_BUFFER_CAPACITY_MS, AAC_DECODER_CAPACITY_MS);
-        } catch (UnsatisfiedLinkError e) {
-            e.printStackTrace();
+            createMediaPlayer();
+
+            sendBroadcast(new Intent(Mode.CREATED));
         } catch (Exception e) {
+            sendBroadcast(new Intent(Mode.NOT_CREATED));
             e.printStackTrace();
         }
-
-
-        this.notifyManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        try {
-            java.net.URL.setURLStreamHandlerFactory(new java.net.URLStreamHandlerFactory() {
-                public java.net.URLStreamHandler createURLStreamHandler(String protocol) {
-                    if ("icy".equals(protocol)) {
-                        return new com.spoledge.aacdecoder.IcyURLStreamHandler();
-                    }
-                    return null;
-                }
-            });
-        } catch (Throwable t) {
-
-        }
-
-        sendBroadcast(new Intent(Mode.CREATED));
     }
 
-    public void setURLStreaming(String streamingURL) {
-        this.streamingURL = streamingURL;
+    public void setURL(String URL) {
+        this.URL = URL;
     }
 
     public void play() {
         if (isConnected()) {
+            createMediaPlayer();
             this.prepare();
         } else {
             sendBroadcast(new Intent(Mode.STOPPED));
@@ -148,14 +126,10 @@ public class Signal extends Service implements OnErrorListener,
 
         if (this.isPlaying) {
             this.isPlaying = false;
-            this.aacPlayer.stop();
+            this.mediaPlayer.stop();
         }
 
         sendBroadcast(new Intent(Mode.STOPPED));
-    }
-
-    public NotificationManager getNotifyManager() {
-        return notifyManager;
     }
 
     public class RadioBinder extends Binder {
@@ -164,47 +138,9 @@ public class Signal extends Service implements OnErrorListener,
         }
     }
 
-    public void showNotification() {
-        /*remoteViews = new RemoteViews(context.getPackageName(), R.layout.streaming_notification_player);
-        notifyBuilder = new NotificationCompat.Builder(this.context)
-                .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off) // TODO Use app icon instead
-                .setContentText("")
-                .setOngoing(true)
-                .setContent(remoteViews);
-
-        Intent resultIntent = new Intent(this.context, this.clsActivity);
-        resultIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        resultIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this.context);
-        stackBuilder.addParentStack(this.clsActivity);
-        stackBuilder.addNextIntent(resultIntent);
-
-        PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
-        notifyBuilder.setContentIntent(resultPendingIntent);
-        remoteViews.setOnClickPendingIntent(R.id.btn_streaming_notification_play, makePendingIntent(BROADCAST_PLAYBACK_PLAY));
-        remoteViews.setOnClickPendingIntent(R.id.btn_streaming_notification_stop, makePendingIntent(BROADCAST_EXIT));
-        notifyManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());*/
-    }
-
     private PendingIntent makePendingIntent(String broadcast) {
         Intent intent = new Intent(broadcast);
         return PendingIntent.getBroadcast(this.context, 0, intent, 0);
-    }
-
-    public void clearNotification() {
-        if (notifyManager != null)
-            notifyManager.cancel(NOTIFY_ME_ID);
-    }
-
-    public void exitNotification() {
-        notifyManager.cancelAll();
-        clearNotification();
-        notifyBuilder = null;
-        notifyManager = null;
     }
 
     public boolean isConnected() {
@@ -217,12 +153,12 @@ public class Signal extends Service implements OnErrorListener,
     }
 
     public void prepare() {
-        /* ------Station- buffering-------- */
         this.isPreparingStarted = true;
         sendBroadcast(new Intent(Mode.START_PREPARING));
 
         try {
-            this.aacPlayer.playAsync(this.streamingURL);
+            this.mediaPlayer.setDataSource(this.URL);
+            this.mediaPlayer.prepare();
         } catch (Exception e) {
             e.printStackTrace();
             stop();
@@ -248,28 +184,23 @@ public class Signal extends Service implements OnErrorListener,
     }
 
     @Override
-    public void onPrepared(MediaPlayer _mediaPlayer) {
+    public void onPrepared(MediaPlayer mp) {
         this.isPreparingStarted = false;
         sendBroadcast(new Intent(Mode.PREPARED));
+        mp.start();
     }
 
     @Override
-    public void onCompletion(MediaPlayer mediaPlayer) {
+    public void onCompletion(MediaPlayer mp) {
         this.isPlaying = false;
-        this.aacPlayer.stop();
+        mp.stop();
+        mp.reset();
         sendBroadcast(new Intent(Mode.COMPLETED));
     }
 
     @Override
-    public boolean onInfo(MediaPlayer mp, int what, int extra) {
-        if (what == 701) {
-            this.isPlaying = false;
-            sendBroadcast(new Intent(Mode.BUFFERING_START));
-        } else if (what == 702) {
-            this.isPlaying = true;
-            sendBroadcast(new Intent(Mode.BUFFERING_END));
-        }
-        return false;
+    public void onBufferingUpdate(MediaPlayer mp, int percent) {
+        sendBroadcast(new Intent(Mode.COMPLETED));
     }
 
     @Override
@@ -288,66 +219,4 @@ public class Signal extends Service implements OnErrorListener,
         sendBroadcast(new Intent(Mode.ERROR));
         return false;
     }
-
-    @Override
-    public void playerStarted() {
-        //  TODO
-    }
-
-    @Override
-    public void playerPCMFeedBuffer(boolean isPlaying, int bufSizeMs, int bufCapacityMs) {
-        if (isPlaying) {
-            this.isPreparingStarted = false;
-            if (bufSizeMs < 500) {
-                this.isPlaying = false;
-                sendBroadcast(new Intent(Mode.BUFFERING_START));
-                //buffering
-            } else {
-                this.isPlaying = true;
-                sendBroadcast(new Intent(Mode.PLAYING));
-                //playing
-            }
-        } else {
-            //buffering
-            this.isPlaying = false;
-            sendBroadcast(new Intent(Mode.BUFFERING_START));
-        }
-    }
-
-    @Override
-    public void playerException(final Throwable t) {
-        this.isPlaying = false;
-        this.isPreparingStarted = false;
-        sendBroadcast(new Intent(Mode.ERROR));
-        //  TODO
-    }
-
-    @Override
-    public void playerMetadata(final String key, final String value) {
-        Intent metaIntent = new Intent(Mode.METADATA_UPDATED);
-        metaIntent.putExtra("key", key);
-        metaIntent.putExtra("value", value);
-        sendBroadcast(metaIntent);
-
-        if (key != null && key.equals("StreamTitle") && remoteViews != null) {
-            // remoteViews.setTextViewText(R.id.song_name_notification, value);
-            notifyBuilder.setContent(remoteViews);
-            notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
-        }
-    }
-
-    @Override
-    public void playerAudioTrackCreated(AudioTrack atrack) {
-        //  TODO
-    }
-
-    @Override
-    public void playerStopped(int perf) {
-        this.isPlaying = false;
-        this.isPreparingStarted = false;
-        sendBroadcast(new Intent(Mode.STOPPED));
-        //  TODO
-    }
-
-
 }

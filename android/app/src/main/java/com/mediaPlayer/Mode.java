@@ -1,6 +1,7 @@
 package com.mediaPlayer;
 
 public class Mode {
+    public static String NOT_CREATED = "NOT_CREATED";
     public static String CREATED = "CREATED";
     public static String CONNECTING = "CONNECTING";
     public static String START_PREPARING = "START_PREPARING";
