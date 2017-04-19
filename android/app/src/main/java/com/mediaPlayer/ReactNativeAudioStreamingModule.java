@@ -18,12 +18,16 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import javax.annotation.Nullable;
 
 public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
-    implements ServiceConnection {
+        implements ServiceConnection {
 
+  public static final String SHOULD_SHOW_NOTIFICATION = "showInAndroidNotifications";
   private ReactApplicationContext context;
 
   private Class<?> clsActivity;
-
+  private static Signal signal;
+  private Intent bindIntent;
+  private String streamingURL;
+  private boolean shouldShowNotification;
 
   public ReactNativeAudioStreamingModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -41,9 +45,17 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     return this.clsActivity;
   }
 
+  public void stopOncall() {
+    this.signal.stop();
+  }
+
+  public Signal getSignal() {
+    return signal;
+  }
+
   public void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
     this.context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-        .emit(eventName, params);
+            .emit(eventName, params);
   }
 
   @Override public String getName() {
@@ -53,34 +65,61 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
   @Override public void initialize() {
     super.initialize();
 
-    //TODO
+    try {
+      bindIntent = new Intent(this.context, Signal.class);
+      this.context.bindService(bindIntent, this, Context.BIND_AUTO_CREATE);
+    } catch (Exception e) {
+      Log.e("ERROR", e.getMessage());
+    }
   }
 
   @Override public void onServiceConnected(ComponentName className, IBinder service) {
-    //TODO
+    signal = ((Signal.RadioBinder) service).getService();
+    signal.setData(this.context, this);
+    WritableMap params = Arguments.createMap();
+    sendEvent(this.getReactApplicationContextModule(), "streamingOpen", params);
   }
 
   @Override public void onServiceDisconnected(ComponentName className) {
-    //TODO
+    signal = null;
   }
 
   @ReactMethod public void play(String streamingURL, ReadableMap options) {
-    //TODO
+    this.streamingURL = streamingURL;
+    this.shouldShowNotification =
+            options.hasKey(SHOULD_SHOW_NOTIFICATION) && options.getBoolean(SHOULD_SHOW_NOTIFICATION);
+    signal.setURLStreaming(streamingURL); // URL of MP3 or AAC stream
+    playInternal();
+  }
+
+  private void playInternal() {
+    signal.play();
+    if (shouldShowNotification) {
+      signal.showNotification();
+    }
   }
 
   @ReactMethod public void stop() {
-    // TODO
+    signal.stop();
   }
 
   @ReactMethod public void pause() {
-    // TODO
+    // Not implemented on aac
+    this.stop();
   }
 
   @ReactMethod public void resume() {
-    // TODO
+    // Not implemented on aac
+    playInternal();
+  }
+
+  @ReactMethod public void destroyNotification() {
+    signal.exitNotification();
   }
 
   @ReactMethod public void getStatus(Callback callback) {
-    //TODO
+    WritableMap state = Arguments.createMap();
+    state.putString("status", signal != null && signal.isPlaying ? Mode.PLAYING : Mode.STOPPED);
+    callback.invoke(null, state);
   }
 }
