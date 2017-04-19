@@ -1,19 +1,16 @@
 package com.mediaPlayer;
 
 public class Mode {
-    public static String NOT_CREATED = "NOT_CREATED";
-    public static String CREATED = "CREATED";
-    public static String CONNECTING = "CONNECTING";
-    public static String START_PREPARING = "START_PREPARING";
-    public static String PREPARED = "PREPARED";
-    public static String STARTED = "STARTED";
-    public static String PLAYING = "PLAYING";
-    public static String STOPPED = "STOPPED";
-    public static String COMPLETED = "COMPLETED";
-    public static String ERROR = "ERROR";
-    public static String BUFFERING_START = "BUFFERING_START";
-    public static String BUFFERING_END = "BUFFERING_END";
-    public static String METADATA_UPDATED = "METADATA_UPDATED";
-    public static String ALBUM_UPDATED = "ALBUM_UPDATED";
-    public static String DESTROYED = "DESTROYED";
+    public static final String SERVICE_INIT = "service_init";
+    public static final String CONNECTION_ERROR = "connection_error";
+
+    public static final String MUSIC_START_PREPARE = "music_start_prepare";
+    public static final String MUSIC_PREPARE = "music_prepare";
+    public static final String MUSIC_START = "music_start";
+    public static final String MUSIC_PAUSE = "music_pause";
+    public static final String MUSIC_STOP = "music_stop";
+    public static final String MUSIC_COMPLETE = "music_complete";
+    public static final String MUSIC_ERROR = "music_error";
+    public static final String MUSIC_BUFFER_STATUS = "music_buffer_status";
+    public static final String MUSIC_STATUS = "music_status";
 }

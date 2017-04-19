@@ -18,11 +18,17 @@ public class EventsReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         WritableMap params = Arguments.createMap();
-        params.putString("status", intent.getAction());
+        params.putString("type", intent.getAction());
 
-        if (intent.getAction().equals(Mode.METADATA_UPDATED)) {
-            params.putString("key", intent.getStringExtra("key"));
-            params.putString("value", intent.getStringExtra("value"));
+        switch (intent.getAction()) {
+            case Mode.MUSIC_STATUS:
+                params.putBoolean("isPlaying", intent.getBooleanExtra("isPlaying", false));
+                params.putInt("position", intent.getIntExtra("position", 0));
+                params.putInt("duration", intent.getIntExtra("duration", 0));
+                break;
+            case Mode.MUSIC_BUFFER_STATUS:
+                params.putInt("percent", intent.getIntExtra("percent", 0));
+                break;
         }
 
         this.module.sendEvent(this.module.getReactApplicationContextModule(), "AudioBridgeEvent", params);

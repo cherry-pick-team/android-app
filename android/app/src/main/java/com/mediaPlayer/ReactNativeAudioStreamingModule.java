@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
+
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -44,12 +45,9 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
         return this.clsActivity;
     }
 
-    public void stopOncall() {
-        this.signal.stop();
-    }
-
-    public Signal getSignal() {
-        return signal;
+    @Override
+    public String getName() {
+        return "ReactNativeAudioStreaming";
     }
 
     public void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
@@ -57,9 +55,8 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
                 .emit(eventName, params);
     }
 
-    @Override
-    public String getName() {
-        return "ReactNativeAudioStreaming";
+    public Signal getSignal() {
+        return signal;
     }
 
     @Override
@@ -78,8 +75,6 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     public void onServiceConnected(ComponentName className, IBinder service) {
         signal = ((Signal.RadioBinder) service).getService();
         signal.setData(this.context, this);
-        WritableMap params = Arguments.createMap();
-        sendEvent(this.getReactApplicationContextModule(), "serviceCreated", params);
     }
 
     @Override
@@ -88,14 +83,25 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     }
 
     @ReactMethod
-    public void play(String URL, ReadableMap options) {
-        this.URL = URL;
-        signal.setURL(URL);
-        playInternal();
+    public void resume() {
+        signal.play();
     }
 
-    private void playInternal() {
-        signal.play();
+    @ReactMethod
+    public void setURL(String URL) {
+        this.URL = URL;
+        signal.setURL(URL);
+    }
+
+    @ReactMethod
+    public void play(String URL) {
+        setURL(URL);
+        resume();
+    }
+
+    @ReactMethod
+    public void pause() {
+        signal.pause();
     }
 
     @ReactMethod
@@ -104,19 +110,16 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     }
 
     @ReactMethod
-    public void pause() {
-        this.stop();
+    public void askStatus() {
+        signal.askStatus();
     }
 
     @ReactMethod
-    public void resume() {
-        playInternal();
+    public void seek(int ms) {
+        signal.seek(ms);
     }
 
-    @ReactMethod
-    public void getStatus(Callback callback) {
-        WritableMap state = Arguments.createMap();
-        state.putString("status", signal != null && signal.isPlaying ? Mode.PLAYING : Mode.STOPPED);
-        callback.invoke(null, state);
+    public void stopOncall() {
+        this.signal.stop();
     }
 }
