@@ -13,6 +13,7 @@
     "react-native-lazyload": "^1.1.0",
     "react-native-material-kit": "^0.4.1",
     "react-native-material-ui": "^1.8.0",
+    "react-native-pulse": "^1.0.4",
     "react-native-router-flux": "^3.38.0",
     "react-native-svg": "^5.1.5",
     "react-native-swiper": "^1.5.4",
