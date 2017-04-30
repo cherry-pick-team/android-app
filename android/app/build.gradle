@@ -68,7 +68,7 @@ import com.android.build.OutputFile
 apply from: "../../node_modules/react-native/react.gradle"
 
 project.ext.vectoricons = [
-    iconFontNames: [ 'MaterialIcons.ttf', 'EvilIcons.ttf' ] // Name of the font files you want to copy
+    iconFontNames: [ 'MaterialIcons.ttf', 'EvilIcons.ttf', 'Foundation.tff' ] // Name of the font files you want to copy
 ]
 
 
@@ -133,6 +133,7 @@ android {
 }
 
 dependencies {
+    compile project(':react-native-linear-gradient')
     compile project(':react-native-material-kit')
     compile project(':react-native-vector-icons')
     compile project(':react-native-svg')
