@@ -2,7 +2,7 @@
 #
 .DS_Store
 
-android-app-key.keystore
+android/app/android-app-key.keystore
 
 # Xcode
 #
