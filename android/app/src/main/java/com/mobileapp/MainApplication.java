@@ -1,4 +1,4 @@
-package com.mobileapp;
+package com.cherrypick.shozasong;
 
 import android.app.Application;
 
